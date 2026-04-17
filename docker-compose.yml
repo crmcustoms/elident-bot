@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  elident-bot:
+    build: .
+    container_name: elident-bot
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./tokens.json:/app/tokens.json
+      - ./conversations.db:/app/conversations.db
+    env_file: .env
+    environment:
+      - PYTHONUNBUFFERED=1
