@@ -9,7 +9,8 @@ services:
       - "8003:8003"
     volumes:
       - ./tokens.json:/app/tokens.json
-      - ./conversations.db:/app/conversations.db
+      - ./data:/app/data
     env_file: .env
     environment:
       - PYTHONUNBUFFERED=1
+      - DB_FILE=data/conversations.db
