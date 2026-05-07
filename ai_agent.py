@@ -229,6 +229,7 @@ async def process_message(
             messages=messages,
             tools=TOOLS,
             temperature=0.3,
+            response_format={"type": "json_object"},
         )
         choice = response.choices[0]
         msg = choice.message
@@ -257,7 +258,9 @@ async def process_message(
             parsed = _parse_json(msg.content)
             if parsed:
                 return parsed
-            logger.error("Could not parse AI response as JSON: %s", msg.content[:300])
+            # Fallback: AI returned plain text — send it as-is
+            logger.warning("Could not parse AI response as JSON, using as plain text: %s", msg.content[:300])
+            return {"messageToClient": msg.content, "pipeline_stage": None, "spam": False}
 
         break
 
