@@ -19,17 +19,16 @@ _openai = AsyncOpenAI(
     base_url=settings.openai_base_url,
 )
 
-_scenario = (
-    Path(settings.scenario_file).read_text(encoding="utf-8")
-    if Path(settings.scenario_file).exists()
-    else ""
-)
+def _load_scenario() -> str:
+    p = Path(settings.scenario_file)
+    return p.read_text(encoding="utf-8") if p.exists() else ""
 
-SYSTEM_PROMPT = f"""Ты — ИИ-ассистент стоматологической клиники EliteDent (Тбилиси).
+
+SYSTEM_PROMPT_TEMPLATE = """Ты — ИИ-ассистент стоматологической клиники EliteDent (Тбилиси).
 Квалифицируешь пациентов, собираешь данные, записываешь в amoCRM.
 
 ## Сценарий квалификации:
-{_scenario}
+{scenario}
 
 ## Статусы воронки (pipeline_stage):
 - 73422594 — Неквалифицированный (новый лид)
@@ -209,7 +208,8 @@ async def process_message(
     image_data: bytes | None,
     history: list[dict],
 ) -> dict | None:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    system_prompt = SYSTEM_PROMPT_TEMPLATE.format(scenario=_load_scenario())
+    messages = [{"role": "system", "content": system_prompt}]
     messages.extend(history)
 
     if image_data:

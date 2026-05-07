@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     db_file: str = "conversations.db"
     scenario_file: str = "scenario.md"
 
+    admin_password: str = "elident2024"
+
     port: int = 8003
 
     class Config:

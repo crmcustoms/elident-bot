@@ -1,8 +1,11 @@
 import logging
 import asyncio
+from pathlib import Path
 
-from fastapi import FastAPI, Request, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, BackgroundTasks, Depends, HTTPException, status
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets
 
 from config import settings
 from amo_client import AmoClient
@@ -17,11 +20,70 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="EliteDent Bot")
 db = ConversationDB()
+security = HTTPBasic()
+
+
+def _require_auth(credentials: HTTPBasicCredentials = Depends(security)):
+    ok = secrets.compare_digest(credentials.password.encode(), settings.admin_password.encode())
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            headers={"WWW-Authenticate": "Basic"})
+    return credentials
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+_ADMIN_HTML = """<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EliteDent Bot — Інструкції</title>
+<style>
+  body {{ font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }}
+  h1 {{ font-size: 1.4rem; color: #333; }}
+  textarea {{ width: 100%; height: 500px; font-family: monospace; font-size: 14px; padding: 12px;
+             border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; resize: vertical; }}
+  button {{ margin-top: 12px; padding: 10px 28px; background: #2563eb; color: white;
+            border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }}
+  button:hover {{ background: #1d4ed8; }}
+  .msg {{ margin-top: 10px; padding: 8px 14px; border-radius: 5px; font-size: 14px; }}
+  .ok {{ background: #d1fae5; color: #065f46; }}
+  .err {{ background: #fee2e2; color: #991b1b; }}
+</style>
+</head>
+<body>
+<h1>EliteDent Bot — Інструкції для асистента</h1>
+<form method="post" action="scenario">
+  <textarea name="content">{content}</textarea>
+  <br><button type="submit">Зберегти</button>
+</form>
+{msg}
+</body>
+</html>"""
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_get(_=Depends(_require_auth)):
+    content = Path(settings.scenario_file).read_text(encoding="utf-8") \
+        if Path(settings.scenario_file).exists() else ""
+    return _ADMIN_HTML.format(content=content.replace("{", "{{").replace("}", "}}"), msg="")
+
+
+@app.post("/admin/scenario", response_class=HTMLResponse)
+async def admin_save(request: Request, _=Depends(_require_auth)):
+    form = await request.form()
+    content = form.get("content", "")
+    try:
+        Path(settings.scenario_file).write_text(content, encoding="utf-8")
+        msg = '<div class="msg ok">✅ Збережено. Бот використовує нові інструкції.</div>'
+    except Exception as e:
+        msg = f'<div class="msg err">❌ Помилка: {e}</div>'
+        content = ""
+    return _ADMIN_HTML.format(content=content.replace("{", "{{").replace("}", "}}"), msg=msg)
 
 
 @app.post("/webhook/chat")
