@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     scenario_file: str = "scenario.md"
 
     admin_password: str = "elident2024"
+    # Comma-separated allowed origins, e.g. "pro.wappi.wa,pro.telegram"
+    # Empty = allow all channels
+    allowed_origins: str = ""
 
     port: int = 8003
 

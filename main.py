@@ -98,12 +98,17 @@ async def webhook_chat(request: Request, background_tasks: BackgroundTasks):
 
 
 async def _handle(data: dict):
-    # Debug: log full payload to identify channel field
-    logger.info("WEBHOOK FULL PAYLOAD: %s", data)
-
     entity_id_raw = data.get("message[add][0][entity_id]") or data.get("message[add][0][element_id]")
     if not entity_id_raw:
         return
+
+    # Channel filter
+    origin = data.get("message[add][0][origin]", "")
+    if settings.allowed_origins:
+        allowed = [o.strip() for o in settings.allowed_origins.split(",")]
+        if origin not in allowed:
+            logger.info("Skipping origin=%s (not in ALLOWED_ORIGINS)", origin)
+            return
 
     entity_id = int(entity_id_raw)
     entity_type = data.get("message[add][0][entity_type]", "lead")
