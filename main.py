@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import re
 from pathlib import Path
 
 from fastapi import FastAPI, Request, BackgroundTasks, Depends, HTTPException, status
@@ -129,6 +130,8 @@ async def _handle(data: dict):
     account_url = data.get("account[_links][self]", "").rstrip("/")
     account_id = data.get("account[id]", "")
     text = data.get("message[add][0][text]", "") or ""
+    # Strip URLs (e.g. Facebook Ads auto-appended links like fb.me/...)
+    text = re.sub(r'https?://\S+', '', text).strip()
     attachment_type = data.get("message[add][0][attachment][type]", "")
     attachment_link = data.get("message[add][0][attachment][link]", "")
 
