@@ -110,6 +110,14 @@ async def _handle(data: dict):
             logger.info("Skipping origin=%s (not in ALLOWED_ORIGINS)", origin)
             return
 
+    # Skip system/service messages (missed calls, etc.)
+    raw_text = data.get("message[add][0][text]", "") or ""
+    _SYSTEM_PREFIXES = ("☎️", "📞", "🔔")
+    _SYSTEM_KEYWORDS = ("пропущенный звонок", "missed call", "входящий звонок", "исходящий звонок")
+    if raw_text.startswith(_SYSTEM_PREFIXES) or any(k in raw_text.lower() for k in _SYSTEM_KEYWORDS):
+        logger.info("Skipping system message: %s", raw_text[:60])
+        return
+
     entity_id = int(entity_id_raw)
     entity_type = data.get("message[add][0][entity_type]", "lead")
     author_type = data.get("message[add][0][author][type]", "")
