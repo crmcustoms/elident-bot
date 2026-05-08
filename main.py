@@ -98,9 +98,8 @@ async def webhook_chat(request: Request, background_tasks: BackgroundTasks):
 
 
 async def _handle(data: dict):
-    # Debug: log full payload keys to identify channel field
-    logger.info("WEBHOOK PAYLOAD KEYS: %s", list(data.keys()))
-    logger.info("WEBHOOK PAYLOAD: %s", {k: v for k, v in data.items() if "channel" in k.lower() or "source" in k.lower() or "type" in k.lower()})
+    # Debug: log full payload to identify channel field
+    logger.info("WEBHOOK FULL PAYLOAD: %s", data)
 
     entity_id_raw = data.get("message[add][0][entity_id]") or data.get("message[add][0][element_id]")
     if not entity_id_raw:
